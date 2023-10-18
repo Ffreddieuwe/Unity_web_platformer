@@ -33,8 +33,12 @@ public class Player_Movement : MonoBehaviour
     private float wallJumpTime = 0.2f;
     private float wallJumpCounter;
     private float wallJumpDuration = 0.4f;
-    private Vector2 wallJumpingPower = new Vector2(8f, 8f);
+    private Vector2 wallJumpingPower = new Vector2(1.5f, 8f);
 
+
+    public GameObject pauseMenu;
+
+    public Animator animator;
 
     // Start is called before the first frame update
     void Start()
@@ -55,7 +59,7 @@ public class Player_Movement : MonoBehaviour
 
     private bool IsWalled()
     {
-        return Physics2D.OverlapCircle(wallCheck.position, 0.2f, wallLayer);
+        return Physics2D.OverlapCircle(wallCheck.position, 0.1f, wallLayer);
     }
 
     private void WallSlide()
@@ -91,6 +95,7 @@ public class Player_Movement : MonoBehaviour
             isWallJumping = true;
             rb.velocity = new Vector2(wallJumpDirection * wallJumpingPower.x, wallJumpingPower.y);
             wallJumpCounter = 0f;
+            animator.SetBool("Jumping", true);
 
             if (transform.localScale.x != wallJumpDirection)
             {
@@ -109,49 +114,84 @@ public class Player_Movement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Checks whether player is grounded
-        grounded = Physics2D.OverlapCapsule(groundCheck.position, new Vector2(1.0f, 0.03f), CapsuleDirection2D.Horizontal, 0, groundLayer);
+        if (pauseMenu.activeSelf == false)
+        {
+            //Checks whether player is grounded
+            grounded = Physics2D.OverlapCapsule(groundCheck.position, new Vector2(1.0f, 0.03f), CapsuleDirection2D.Horizontal, 0, groundLayer);
 
-        //Takes player input
-        Move = Input.GetAxis("Horizontal");
+            //Takes player input
+            Move = Input.GetAxis("Horizontal");
 
-        //Jump handling
-        if (Input.GetButtonDown("Jump") && grounded)
-        {
-            jumping = true;
-            jumpTime = 0;
-        }
-        if (jumping)
-        {
-            rb.velocity = new Vector2(rb.velocity.x, jumpHeight);
-            jumpTime += Time.deltaTime;
-        }
-        if (Input.GetButtonUp("Jump") | jumpTime > buttonTime)
-        {
-            jumping = false;
+            //Jump handling
+            if (Input.GetButtonDown("Jump") && grounded)
+            {
+                jumping = true;
+                jumpTime = 0;
+                animator.SetBool("Jumping", true);
+            }
+            if (jumping)
+            {
+                rb.velocity = new Vector2(rb.velocity.x, jumpHeight);
+                jumpTime += Time.deltaTime;
+            }
+            if (Input.GetButtonUp("Jump") | jumpTime > buttonTime)
+            {
+                jumping = false;
+                animator.SetBool("Jumping", false);
+                animator.SetBool("Falling", true);
+            }
+
+            //Flips player sprite if movement direction changes
+            if (!facingRight && Move > 0f && !isWallJumping)
+            {
+                Flip();
+            }
+            else if (facingRight && Move < 0f && !isWallJumping)
+            {
+                Flip();
+            }
+
+            WallSlide();
+            WallJump();
+
+            if (isSliding)
+            {
+                animator.SetBool("Sliding", true);
+            }
+            else
+            {
+                animator.SetBool("Sliding", false);
+            }
+
+            if (grounded)
+            {
+                animator.SetBool("Falling", false);
+            }
+
         }
 
-        //Flips player sprite if movement direction changes
-        if(!facingRight && Move > 0f && !isWallJumping)
-        {
-            Flip();
-        }
-        else if (facingRight && Move < 0f && !isWallJumping)
-        {
-            Flip();
-        }
-
-        WallSlide();
-        WallJump();
+        
     }
 
     private void FixedUpdate()
     {
-        //Moves player
-        if(!isSliding && !isWallJumping)
+        if (pauseMenu.activeSelf == false)
         {
-            rb.velocity = new Vector2(speed * Move, rb.velocity.y);
+            //Moves player
+            if (!isSliding && !isWallJumping)
+            {
+                rb.velocity = new Vector2(speed * Move, rb.velocity.y);
+
+                if (rb.velocity.x != 0f)
+                {
+                    animator.SetBool("Running", true);
+                }
+                else
+                {
+                    animator.SetBool("Running", false);
+                }
+                
+            }
         }
-        
     }
 }
